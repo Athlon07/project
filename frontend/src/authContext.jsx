@@ -1,103 +1,91 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { rechargeWallet as rechargeWalletAPI } from './services/walletService';
+
 
 const AuthContext = createContext();
 
-// Admin credentials (in a real app, this would be handled by the backend)
-const ADMIN_CREDENTIALS = {
-  email: 'admin@university.edu',
-  password: 'admin123'
-};
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
+  // Load user from localStorage on initial load
   useEffect(() => {
-    // Check if user is logged in on mount
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      // Ensure wallet balance exists
-      if (parsedUser.role === 'student' && !parsedUser.wallet) {
-        parsedUser.wallet = {
-          balance: 0,
-          transactions: []
-        };
-      }
-      setUser(parsedUser);
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
     }
-    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
-      // Check if it's an admin login
-      if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-        const userData = {
-          email,
-          role: 'admin',
-          name: 'Admin User'
-        };
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        return userData;
-      }
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include'
+      });
 
-      // For regular users (demo purposes)
-      const userData = {
-        email,
-        role: 'student',
-        name: email.split('@')[0],
-        wallet: {
-          balance: 0,
-          transactions: []
-        }
-      };
-      
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return userData;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.msg || 'Login failed');
+
+      localStorage.setItem('user', JSON.stringify(data.student));
+      setUser(data.student);
+      navigate('/dashboard');
     } catch (error) {
-      throw new Error('Authentication failed');
+      throw error;
+    }
+  };
+
+  const register = async (name, email, password) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.msg || 'Registration failed');
+
+      localStorage.setItem('user', JSON.stringify(data.student));
+      setUser(data.student);
+      navigate('/dashboard');
+    } catch (error) {
+      throw error;
     }
   };
 
   const logout = () => {
-    setUser(null);
     localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login');
   };
 
-  const updateWallet = (amount, type, description) => {
-    if (!user || user.role !== 'student') return;
-
-    const updatedUser = {
-      ...user,
-      wallet: {
-        ...user.wallet,
-        balance: user.wallet.balance + amount,
-        transactions: [
-          {
-            id: Date.now(),
-            amount,
-            type,
-            description,
-            timestamp: new Date().toISOString()
-          },
-          ...user.wallet.transactions
-        ]
+  const updateWallet = async (amount, type, description) => {
+    if (type === 'recharge') {
+      try {
+        const newBalance = await rechargeWalletAPI(user.id, amount);
+        // Update the user object and localStorage with the new balance
+        const updatedUser = { ...user, wallet_balance: newBalance };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch (err) {
+        console.error("Wallet recharge failed", err);
       }
-    };
-
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    } else {
+      // For other wallet updates (e.g., fare deduction), update locally
+      const updatedUser = { ...user, wallet_balance: user.wallet_balance + amount };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  const value = { user, login, register, logout,updateWallet  };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateWallet }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

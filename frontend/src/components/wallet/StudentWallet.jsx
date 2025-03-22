@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function StudentWallet({ balance, onRecharge }) {
+export default function StudentWallet({ balance, onRecharge, expenseReport }) {
   const [amount, setAmount] = useState('');
   const [showRechargeForm, setShowRechargeForm] = useState(false);
 
@@ -70,24 +70,39 @@ export default function StudentWallet({ balance, onRecharge }) {
         <div className="mt-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Transactions</h3>
           <div className="space-y-3">
-            {/* Mock transactions - in a real app, these would come from an API */}
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-              <div>
-                <p className="font-medium">Shuttle Booking</p>
-                <p className="text-sm text-gray-600">Route A - Library to Sports Complex</p>
-              </div>
-              <div className="text-red-600">-₹2.00</div>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-              <div>
-                <p className="font-medium">Wallet Recharge</p>
-                <p className="text-sm text-gray-600">Online Payment</p>
-              </div>
-              <div className="text-green-600">+₹100.00</div>
-            </div>
+            {expenseReport && expenseReport.bookings && expenseReport.bookings.length > 0 ? (
+              expenseReport.bookings.map((booking) => (
+                <div key={booking.id || booking._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                  <div>
+                    <p className="font-medium">Shuttle Booking</p>
+                    <p className="text-sm text-gray-600">
+                      {booking.pickup} → {booking.dropoff} for ₹{booking.fare}
+                    </p>
+                  </div>
+                  <div className="text-red-600">-₹{booking.fare}</div>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                  <div>
+                    <p className="font-medium">Shuttle Booking</p>
+                    <p className="text-sm text-gray-600">Route A - Library to Sports Complex</p>
+                  </div>
+                  <div className="text-red-600">-₹2.00</div>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                  <div>
+                    <p className="font-medium">Wallet Recharge</p>
+                    <p className="text-sm text-gray-600">Online Payment</p>
+                  </div>
+                  <div className="text-green-600">+₹100.00</div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}

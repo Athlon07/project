@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios'; // added for API call
 import ShuttleBooking from './booking/ShuttleBooking';
 import StudentWallet from './wallet/StudentWallet';
 import { useAuth } from '../authContext';
@@ -9,6 +10,7 @@ export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState('book');
   const [bookingHistory, setBookingHistory] = useState([]);
   const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [expenseReport, setExpenseReport] = useState(null); // new state
 
   useEffect(() => {
     // Load bookings on component mount
@@ -32,21 +34,49 @@ export default function StudentDashboard() {
     loadBookings();
   }, [user.id]);
 
-  const handleRecharge = (amount) => {
-    updateWallet(amount, 'recharge', 'Wallet Recharge');
+  // New: Fetch expense report when wallet tab is active
+  useEffect(() => {
+    if (activeTab === 'wallet') {
+      axios
+        .get(`http://localhost:5000/api/booking/expense_report/${user.id}`)
+        .then((res) => {
+          setExpenseReport(res.data.report);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch expense report", err);
+        });
+    }
+  }, [activeTab, user.id]);
+
+  const handleRecharge = async (amount) => {
+    // Calls the updateWallet function in AuthContext, which calls the backend recharge endpoint
+    await updateWallet(amount, 'recharge', 'Wallet Recharge');
   };
 
   const handleBooking = (booking) => {
-    // Add to upcoming trips if the date is in the future
-    const bookingDate = new Date(booking.date);
+    // Transform the backend booking object into the dashboard format
+    const bookingDateObj = new Date(booking.timestamp);
+    const formattedBooking = {
+      id: booking.id,
+      // Display route name if available; otherwise default to a string.
+      route: booking.route_name || "Shuttle Ride",
+      from: booking.pickup,
+      to: booking.dropoff,
+      price: booking.fare,
+      date: bookingDateObj.toLocaleDateString(), // formatted date
+      time: bookingDateObj.toLocaleTimeString(),   // formatted time
+      // Assuming new bookings are upcoming unless updated otherwise
+      status: "upcoming"
+    };
+
     const today = new Date();
-    
-    if (bookingDate >= today) {
-      setUpcomingTrips([booking, ...upcomingTrips]);
+    // Determine if the booking should go into upcoming trips based on the booking date
+    if (bookingDateObj >= today) {
+      setUpcomingTrips([formattedBooking, ...upcomingTrips]);
     }
     
-    // Add to booking history
-    setBookingHistory([booking, ...bookingHistory]);
+    // Add booking to booking history
+    setBookingHistory([formattedBooking, ...bookingHistory]);
   };
 
   const handleCancelTrip = (tripId) => {
@@ -168,8 +198,9 @@ export default function StudentDashboard() {
           )}
           {activeTab === 'wallet' && (
             <StudentWallet
-              balance={user.wallet.balance}
+              balance={user.wallet_balance}
               onRecharge={handleRecharge}
+              expenseReport={expenseReport}  // pass expense report prop
             />
           )}
           {activeTab === 'history' && (

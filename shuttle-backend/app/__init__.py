@@ -9,8 +9,7 @@ def create_app():
     app.config.from_object(Config)
     
     # Enable Cross-Origin Resource Sharing (CORS)
-    CORS(app)
-    
+    CORS(app, supports_credentials=True, origins=["*"])
     # Setup MongoDB connection using pymongo
     uri = app.config["MONGO_URI"]
     client = MongoClient(uri, server_api=ServerApi('1'))

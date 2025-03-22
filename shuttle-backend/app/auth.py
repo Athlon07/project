@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson.objectid import ObjectId
+from flask_cors import cross_origin
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -12,6 +13,8 @@ def is_valid_university_email(email, domain="@bennett.edu.in"):
 
 # Student Registration
 @auth_bp.route('/register', methods=['POST'])
+@cross_origin(supports_credentials=True)
+
 def register():
     db = get_db()
     data = request.get_json()
@@ -49,6 +52,7 @@ def register():
 
 # Student Login (existing implementation)
 @auth_bp.route('/login', methods=['POST'])
+@cross_origin(supports_credentials=True)
 def login():
     db = get_db()
     data = request.get_json()
