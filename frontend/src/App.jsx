@@ -5,23 +5,27 @@ import Footer from './components/Footer';
 import AuthPage from './components/AuthPage';
 import StudentDashboard from './components/StudentDashboard';
 import TripHistory from './components/TripHistory';
+import AdminDashboard from './components/AdminDashboard'; // Import the AdminDashboard
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return (
     <Routes>
       <Route path="/" element={
-        user ? <Navigate to="/dashboard" /> : <Navigate to="/auth" />
+        user ? (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/dashboard" />) : <Navigate to="/auth" />
       } />
       <Route path="/auth" element={
-        user ? <Navigate to="/dashboard" /> : <AuthPage />
+        user ? (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/dashboard" />) : <AuthPage />
       } />
       <Route path="/dashboard" element={
-        user ? <StudentDashboard /> : <Navigate to="/auth" />
+        user ? (isAdmin ? <Navigate to="/admin" /> : <StudentDashboard />) : <Navigate to="/auth" />
       } />
       <Route path="/history" element={
-        user ? <TripHistory /> : <Navigate to="/auth" />
+        user ? (isAdmin ? <Navigate to="/admin" /> : <TripHistory />) : <Navigate to="/auth" />
+      } />
+      <Route path="/admin" element={
+        user && isAdmin ? <AdminDashboard /> : <Navigate to="/auth" />
       } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

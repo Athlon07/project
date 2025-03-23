@@ -30,7 +30,8 @@ def book_ride():
     db = get_db()
     data = request.get_json()
     
-    # Expected fields: student_id, route_id, pickup, dropoff, fare
+    # Expected fields: student_id, route_id, pickup, dropoff, fare.
+    # Optionally, client can supply scheduled_time (ISO string) for when the shuttle departs.
     required = ["student_id", "route_id", "pickup", "dropoff", "fare"]
     if not all(field in data for field in required):
         return jsonify({"msg": "Missing required fields"}), 400
@@ -48,30 +49,43 @@ def book_ride():
         {"$inc": {"wallet_balance": -data["fare"]}}
     )
 
-    # Create booking document
+    # Determine scheduled time.
+    # If the client sends "scheduled_time" (as ISO string), use it.
+    # Otherwise, default to 15 minutes from now.
+    if "scheduled_time" in data:
+        try:
+            scheduled_time = datetime.utcnow() + timedelta(minutes=500)
+        except Exception:
+            return jsonify({"msg": "Invalid scheduled_time format. Use ISO string."}), 400
+    else:
+        scheduled_time = datetime.utcnow() + timedelta(minutes=500)
+
+    # Create booking document with an additional scheduled_time field.
     booking = {
         "student_id": ObjectId(data["student_id"]),
         "route_id": ObjectId(data["route_id"]),
         "pickup": data["pickup"],
         "dropoff": data["dropoff"],
         "fare": data["fare"],
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow(),  # time of booking creation
+        "scheduled_time": scheduled_time,  # departure time
+        "status": "upcoming"  # you might also want to store a status field
     }
     result = db.bookings.insert_one(booking)
     booking["id"] = result.inserted_id
 
-    # Convert booking document to a JSON serializable format
+    # Convert booking document to JSON serializable format
     booking = convert_nonserializable(booking)
     
     # Generate detailed QR Code data that shows booking details.
-    # For example: the QR code shows the booking ID, student name, pickup and dropoff locations.
     student_name = student.get("name", "Unknown")
     qr_data = (
         f"Booking ID: {booking['id']}\n"
         f"Student: {student_name}\n"
         f"Pickup: {booking['pickup']}\n"
         f"Dropoff: {booking['dropoff']}\n"
-        f"Fare: {booking['fare']}"
+        f"Fare: {booking['fare']}\n"
+        f"Departure: {booking['scheduled_time']}"
     )
     
     # Generate the QR code image
@@ -87,14 +101,13 @@ def book_ride():
 
 
 
-
 @booking_bp.route('/history/<string:student_id>', methods=['GET'])
 def booking_history(student_id):
     db = get_db()
     limit = request.args.get("limit", default=None, type=int)
     
     try:
-        bookings_cursor = db.bookings.find({"student_id": ObjectId(student_id)}).sort("timestamp", -1)
+        bookings_cursor = db.bookings.find({"student_id": ObjectId(student_id)}).sort("scheduled_time", -1)
     except Exception:
         return jsonify({"msg": "Invalid student ID format"}), 400
 

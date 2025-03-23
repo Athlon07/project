@@ -139,3 +139,22 @@ def update_student_points():
         "msg": f"Points updated successfully. Reason: {reason}",
         "student": student_data
     }), 200
+
+
+@admin_bp.route('/students', methods=['GET'])
+def get_all_students():
+    db = get_db()
+    try:
+        # Retrieve all student documents from the students collection.
+        students_cursor = db.students.find()
+        students = []
+        for student in students_cursor:
+            students.append({
+                "id": str(student["_id"]),
+                "name": student.get("name", "N/A"),
+                "email": student.get("email", "N/A"),
+                "wallet_balance": student.get("wallet_balance", 0)
+            })
+        return jsonify({"students": students}), 200
+    except Exception as e:
+        return jsonify({"msg": "Error retrieving students", "error": str(e)}), 500
