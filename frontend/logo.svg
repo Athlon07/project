@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background circle with pulse effect -->
+  <circle cx="32" cy="32" r="30" fill="#059669" fill-opacity="0.2" />
+  
+  <!-- Bus icon (simplified version of Lucide's Bus icon) -->
+  <g fill="none" stroke="#047857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Bus body -->
+    <rect x="16" y="16" width="32" height="32" rx="3" />
+    <!-- Windows -->
+    <line x1="16" y1="24" x2="48" y2="24" />
+    <line x1="16" y1="40" x2="48" y2="40" />
+    <!-- Wheels -->
+    <circle cx="22" cy="48" r="4" />
+    <circle cx="42" cy="48" r="4" />
+    <!-- Door -->
+    <line x1="36" y1="24" x2="36" y2="40" />
+  </g>
+</svg>
